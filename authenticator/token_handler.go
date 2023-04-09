@@ -18,6 +18,7 @@ import (
 	error_encoder "github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/error"
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/field"
 	"github.com/mitchellh/mapstructure"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -128,13 +129,14 @@ func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
 				return result, err
 			}
 
-			err = utils.HandleGrpcError(err)
 			grpcStatus, ok := status.FromError(err)
-			if ok && grpcStatus.Code().String() == "401" {
+			if ok && grpcStatus.Code() == codes.Unauthenticated {
 				if errRefresh := m.RefreshToken(); errRefresh == nil {
 					result, err = handler(ctx, req)
 				}
 			}
+
+			err = utils.HandleGrpcError(err)
 			if err.Error() == "401" {
 				if errRefresh := m.RefreshToken(); errRefresh == nil {
 					result, err = handler(ctx, req)
