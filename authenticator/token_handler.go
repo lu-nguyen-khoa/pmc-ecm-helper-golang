@@ -10,6 +10,7 @@ import (
 
 	utils "github.com/Pharmacity-JSC/pmc-ecm-utility-golang"
 	"github.com/go-kratos/kratos/v2/middleware"
+	"github.com/go-kratos/kratos/v2/transport"
 )
 
 type ISignInData interface {
@@ -65,7 +66,7 @@ func (m *roleManager) RefreshToken() error {
 func (m *roleManager) RoleMiddleware() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
-			iToken, ok := req.(utils.IToken)
+			trans, ok := transport.FromServerContext(ctx)
 			if !ok {
 				return handler(ctx, req)
 			}
@@ -75,7 +76,7 @@ func (m *roleManager) RoleMiddleware() middleware.Middleware {
 				rType = rType.Elem()
 			}
 
-			field, exists := rType.FieldByName("Token")
+			field, exists := rType.FieldByName("RoleConfig")
 			if !exists {
 				return handler(ctx, req)
 			}
@@ -92,7 +93,8 @@ func (m *roleManager) RoleMiddleware() middleware.Middleware {
 				return nil, errors.New("000")
 			}
 
-			if err := m.validateRoles(iToken.GetToken(), moduleID, methodID); err != nil {
+			token := trans.RequestHeader().Get("Authorization")
+			if err := m.validateRoles(token, moduleID, methodID); err != nil {
 				m.authenticator.LogError(err)
 				return nil, errors.New("403")
 			}
@@ -103,7 +105,7 @@ func (m *roleManager) RoleMiddleware() middleware.Middleware {
 }
 
 func (m *roleManager) validateRoles(token string, moduleID int64, methodID int64) error {
-	claims, err := utils.ValidateTokenClaim(token, m.publicKey, m.accessTimeout)
+	claims, err := ValidateTokenClaim(token, m.publicKey, m.accessTimeout)
 	if err != nil && err.Error() == "404" {
 		err = m.RefreshToken()
 	}
