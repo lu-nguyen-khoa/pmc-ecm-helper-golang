@@ -129,17 +129,33 @@ func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
 				return result, err
 			}
 
-			grpcStatus, ok := status.FromError(err)
-			if ok && grpcStatus.Code() == codes.Unauthenticated {
-				if errRefresh := m.RefreshToken(); errRefresh == nil {
-					result, err = handler(ctx, req)
+			if status, ok := status.FromError(err); ok {
+				if status.Code() == codes.Unauthenticated {
+					if errRefresh := m.RefreshToken(); errRefresh == nil {
+						return handler(ctx, req)
+					}
 				}
 			}
 
-			err = utils.HandleGrpcError(err)
-			if err.Error() == "401" {
+			if errPmc, ok := err.(utils.IPMCError); ok {
+				if errPmc.GetStatus() == http.StatusUnauthorized {
+					if errRefresh := m.RefreshToken(); errRefresh == nil {
+						return handler(ctx, req)
+					}
+				}
+			}
+
+			if errField, ok := err.(field.IFieldsError); ok {
+				if errField.Status() == http.StatusUnauthorized {
+					if errRefresh := m.RefreshToken(); errRefresh == nil {
+						return handler(ctx, req)
+					}
+				}
+			}
+
+			if err != nil && err.Error() == "401" {
 				if errRefresh := m.RefreshToken(); errRefresh == nil {
-					result, err = handler(ctx, req)
+					return handler(ctx, req)
 				}
 			}
 
