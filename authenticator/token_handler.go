@@ -17,6 +17,7 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/field"
 	"github.com/mitchellh/mapstructure"
+	"google.golang.org/grpc/status"
 )
 
 type ISignInData interface {
@@ -126,6 +127,12 @@ func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
 			}
 
 			err = utils.HandleGrpcError(err)
+			grpcStatus, ok := status.FromError(err)
+			if ok && grpcStatus.Code().String() == "401" {
+				if errRefresh := m.RefreshToken(); errRefresh == nil {
+					result, err = handler(ctx, req)
+				}
+			}
 			if err.Error() == "401" {
 				if errRefresh := m.RefreshToken(); errRefresh == nil {
 					result, err = handler(ctx, req)
