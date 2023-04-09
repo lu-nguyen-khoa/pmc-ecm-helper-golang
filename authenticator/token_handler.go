@@ -3,7 +3,8 @@ package authenticator
 import (
 	"context"
 	"crypto/ed25519"
-	"errors"
+	"log"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
@@ -12,6 +13,9 @@ import (
 	utils "github.com/Pharmacity-JSC/pmc-ecm-utility-golang"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
+	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/field"
+	"github.com/mitchellh/mapstructure"
 )
 
 type ISignInData interface {
@@ -77,27 +81,27 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 				rType = rType.Elem()
 			}
 
-			field, exists := rType.FieldByName("RoleConfig")
+			config, exists := rType.FieldByName("RoleConfig")
 			if !exists {
 				return handler(ctx, req)
 			}
 
-			methodID, err := strconv.ParseInt(field.Tag.Get("method_id"), 10, 64)
+			methodID, err := strconv.ParseInt(config.Tag.Get("method_id"), 10, 64)
 			if err != nil {
 				m.authenticator.LogError(err)
-				return nil, errors.New("000")
+				return nil, field.NewFieldsError("000", http.StatusForbidden)
 			}
 
-			moduleID, err := strconv.ParseInt(field.Tag.Get("module_id"), 10, 64)
+			moduleID, err := strconv.ParseInt(config.Tag.Get("module_id"), 10, 64)
 			if err != nil {
 				m.authenticator.LogError(err)
-				return nil, errors.New("000")
+				return nil, field.NewFieldsError("000", http.StatusForbidden)
 			}
 
 			token := m.getToken(trans.RequestHeader())
 			if err := m.validateRoles(token, moduleID, methodID); err != nil {
 				m.authenticator.LogError(err)
-				return nil, errors.New("403")
+				return nil, field.NewFieldsError("403", http.StatusForbidden)
 			}
 
 			return handler(ctx, req)
@@ -106,18 +110,18 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 }
 
 func (m *roleManager) validateRoles(token string, moduleID int64, methodID int64) error {
-	claims, err := ValidateTokenClaim(token, m.publicKey, m.accessTimeout)
+	claims, err := m.ValidateTokenClaim(token, m.publicKey, m.accessTimeout)
 	if err != nil && err.Error() == "404" {
 		err = m.RefreshToken()
 	}
 
 	if err != nil {
 		m.authenticator.LogError(err)
-		return errors.New("401")
+		return field.NewFieldsError("401", http.StatusUnauthorized)
 	}
 
 	if !m.hasRole(moduleID, methodID, claims.GetRoles()) {
-		return errors.New("402")
+		return field.NewFieldsError("403", http.StatusUnauthorized)
 	}
 
 	return nil
@@ -167,4 +171,57 @@ func (m *roleManager) getToken(header transport.Header) string {
 	}
 
 	return token
+}
+
+func (m *roleManager) ValidateTokenClaim(token string, secret ed25519.PublicKey, ttl time.Duration) (utils.IClaims, error) {
+	jwtClaims, err := m.ValidateToken(token, secret, ttl)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.GetClaimsFromJwt(jwtClaims)
+}
+
+func (m *roleManager) ValidateToken(token string, secret ed25519.PublicKey, ttl time.Duration) (*jwt.MapClaims, error) {
+	parser := jwt.Parser{
+		SkipClaimsValidation: true,
+	}
+
+	parseHandle := func(token *jwt.Token) (interface{}, error) {
+		return secret, nil
+	}
+
+	jwtToken, err := parser.Parse(token, parseHandle)
+	if err != nil {
+		log.Println(err.Error())
+		return nil, field.NewFieldsError("401", http.StatusUnauthorized)
+	}
+
+	claims, ok := jwtToken.Claims.(jwt.MapClaims)
+	if !ok || !jwtToken.Valid {
+		return nil, field.NewFieldsError("402", http.StatusUnauthorized)
+	}
+
+	createdAt, ok := claims["crat"].(float64)
+	if !ok {
+		return nil, field.NewFieldsError("403", http.StatusUnauthorized)
+	}
+
+	createdAt = createdAt + float64(ttl.Milliseconds())
+	now := float64(time.Now().Unix())
+	if createdAt < now {
+		return nil, field.NewFieldsError("404", http.StatusUnauthorized)
+	}
+	return &claims, err
+}
+
+func (m *roleManager) GetClaimsFromJwt(claims *jwt.MapClaims) (utils.IClaims, error) {
+	result := &utils.Claims{}
+	userClaims := (*claims)["user"]
+	if err := mapstructure.WeakDecode(userClaims, &result); err != nil {
+		log.Println(err.Error())
+		return nil, field.NewFieldsError("405", http.StatusUnauthorized)
+	}
+
+	return result, nil
 }
