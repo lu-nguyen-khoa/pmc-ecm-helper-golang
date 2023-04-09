@@ -8,7 +8,7 @@ import (
 	"log"
 
 	utils "github.com/Pharmacity-JSC/pmc-ecm-utility-golang"
-	"github.com/golang-jwt/jwt"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/mitchellh/mapstructure"
 )
 
