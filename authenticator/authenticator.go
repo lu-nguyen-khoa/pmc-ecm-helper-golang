@@ -26,12 +26,13 @@ func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout
 	}
 
 	client := pb.NewAuthenticatorClient(authConnection)
+	service := &AuthenticatorService{client: client, log: log}
 	result := &roleManager{
 		publicKey:      pubKey,
 		accessTimeout:  accessTimeout,
 		refreshTimeout: refreshTimeout,
 		userinfo:       userinfo,
-		authenticator:  NewAuthenticatorService(client, logger),
+		authenticator:  service,
 	}
 
 	tokeninfo, err := result.signIn()
