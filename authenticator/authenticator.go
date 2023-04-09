@@ -46,13 +46,6 @@ func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout
 	return result
 }
 
-func NewAuthenticatorService(client pb.AuthenticatorClient, logger log.Logger) *AuthenticatorService {
-	return &AuthenticatorService{
-		client: client,
-		log:    log.NewHelper(logger),
-	}
-}
-
 func (s *AuthenticatorService) ServiceSignIn(username string, password string) (ISignInData, error) {
 	pbRequest := &pb.ServiceSignInRequest{Username: username, Password: password}
 	reply, err := s.client.ServiceSignIn(context.Background(), pbRequest)
