@@ -43,6 +43,7 @@ type IRoleValidatorService interface {
 	GetRoleValidatorService()
 	RefreshToken() error
 	GetRoleValidatorHandler() middleware.Middleware
+	GetTokenExpiredHandler() middleware.Middleware
 }
 
 type roleManager struct {
@@ -105,6 +106,25 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 			}
 
 			return handler(ctx, req)
+		}
+	}
+}
+
+func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
+	return func(handler middleware.Handler) middleware.Handler {
+		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+			result, err := handler(ctx, req)
+			if err == nil {
+				return result, err
+			}
+
+			if utils.ComparableContains(err.Error(), "401", "402", "403", "404", "405", "406", "407", "408", "409", "410") {
+				if errRefresh := m.RefreshToken(); errRefresh == nil {
+					result, err = handler(ctx, req)
+				}
+			}
+
+			return result, err
 		}
 	}
 }
@@ -204,8 +224,8 @@ func (m *roleManager) validateToken(token string, secret ed25519.PublicKey, ttl 
 	}
 
 	now := float64(time.Now().Unix())
-	expriredAt := createdAt + float64(ttl.Milliseconds())
-	if expriredAt < now {
+	expirredAt := createdAt + float64(ttl.Milliseconds())
+	if expirredAt < now {
 		return nil, field.NewFieldsError("404", http.StatusUnauthorized)
 	}
 	return &claims, nil
