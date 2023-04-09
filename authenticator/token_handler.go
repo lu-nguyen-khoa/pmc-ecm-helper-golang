@@ -6,6 +6,7 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	utils "github.com/Pharmacity-JSC/pmc-ecm-utility-golang"
@@ -93,7 +94,7 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 				return nil, errors.New("000")
 			}
 
-			token := trans.RequestHeader().Get("Authorization")
+			token := m.getToken(trans.RequestHeader())
 			if err := m.validateRoles(token, moduleID, methodID); err != nil {
 				m.authenticator.LogError(err)
 				return nil, errors.New("403")
@@ -155,4 +156,15 @@ func (m *roleManager) signIn() (ISignInData, error) {
 	}
 
 	return reply, nil
+}
+
+func (m *roleManager) getToken(header transport.Header) string {
+	token := header.Get("Authorization")
+	fields := strings.Fields(token)
+
+	if len(fields) != 0 && fields[0] == "Bearer" {
+		token = fields[1]
+	}
+
+	return token
 }
