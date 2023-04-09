@@ -16,7 +16,7 @@ type AuthenticatorService struct {
 	client pb.AuthenticatorClient
 }
 
-func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, authConnection *g_grpc.ClientConn, logger log.Logger) IRoleValidatorHandler {
+func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, authConnection *g_grpc.ClientConn, logger log.Logger) IRoleValidatorService {
 	log := log.NewHelper(logger)
 	var pubKey ed25519.PublicKey
 	pubKey, err := base64.StdEncoding.DecodeString(publicKey)

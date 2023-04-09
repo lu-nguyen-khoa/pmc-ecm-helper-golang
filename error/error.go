@@ -14,12 +14,12 @@ import (
 	"github.com/go-kratos/kratos/v2/transport/http"
 )
 
-type IErrorEncoder interface {
-	GetDefaultHttpErrorEncoder() http.EncodeErrorFunc
+type IErrorEncoderService interface {
+	GetHttpErrorEncoderHandler() http.EncodeErrorFunc
 	GetErrorEncoder()
 }
 
-func NewErrorEncoderService(localize localize.ILocalizeService) IErrorEncoder {
+func NewErrorEncoderService(localize localize.ILocalizeService) IErrorEncoderService {
 	return &errorEncoder{localize: localize}
 }
 
@@ -29,7 +29,7 @@ type errorEncoder struct {
 
 func (s *errorEncoder) GetErrorEncoder() {}
 
-func (s *errorEncoder) GetDefaultHttpErrorEncoder() http.EncodeErrorFunc {
+func (s *errorEncoder) GetHttpErrorEncoderHandler() http.EncodeErrorFunc {
 	return s.defaultHttpErrorEncoder
 }
 

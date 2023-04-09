@@ -14,11 +14,11 @@ import (
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/field"
 )
 
-type ivalidator interface {
+type iProtoValidator interface {
 	Validate() error
 }
 
-type iValidateError interface {
+type iProtoValidateError interface {
 	Field() string
 	Reason() string
 	Key() bool
@@ -26,26 +26,26 @@ type iValidateError interface {
 	ErrorName() string
 }
 
-type IValidatorService interface {
-	GetValidator() middleware.Middleware
-	GetValidatorService()
+type IProtoValidatorService interface {
+	GetProtoValidatorService()
+	GetProtoValidatorHandler() middleware.Middleware
 }
 
-func NewValidatorService() IValidatorService {
-	return &validatorService{}
+func NewProtoValidatorService() IProtoValidatorService {
+	return &ProtoValidatorService{}
 }
 
-type validatorService struct {
+type ProtoValidatorService struct {
 }
 
-func (s *validatorService) GetValidatorService() {}
+func (s *ProtoValidatorService) GetProtoValidatorService() {}
 
-func (s *validatorService) GetValidator() middleware.Middleware {
+func (s *ProtoValidatorService) GetProtoValidatorHandler() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
-			if v, ok := req.(ivalidator); ok {
+			if v, ok := req.(iProtoValidator); ok {
 				if err := v.Validate(); err != nil {
-					if validErr, ok := err.(iValidateError); ok {
+					if validErr, ok := err.(iProtoValidateError); ok {
 						return nil, s.handleValidationError(validErr, reflect.TypeOf(req))
 					}
 					return nil, errors.BadRequest("VALIDATOR", err.Error()).WithCause(err)
@@ -56,12 +56,12 @@ func (s *validatorService) GetValidator() middleware.Middleware {
 	}
 }
 
-func (s *validatorService) handleValidationError(err iValidateError, structType reflect.Type) error {
+func (s *ProtoValidatorService) handleValidationError(err iProtoValidateError, structType reflect.Type) error {
 	json := s.findFieldTagJson(err.Field(), structType)
 	return field.NewFieldsError("888", http.StatusBadRequest, json)
 }
 
-func (s *validatorService) findFieldTagJson(prop string, rType reflect.Type) string {
+func (s *ProtoValidatorService) findFieldTagJson(prop string, rType reflect.Type) string {
 	props := strings.Split(prop, ".")
 	rType = s.handleType(rType)
 
@@ -74,7 +74,7 @@ func (s *validatorService) findFieldTagJson(prop string, rType reflect.Type) str
 	return s.recursiveFindField(1, s.formatTag(field.Tag.Get("json")), sliceProp, props, field)
 }
 
-func (s *validatorService) recursiveFindField(startAt int, beforeTag string, sliceProp string, props []string, field reflect.StructField) string {
+func (s *ProtoValidatorService) recursiveFindField(startAt int, beforeTag string, sliceProp string, props []string, field reflect.StructField) string {
 	if startAt == len(props) {
 		return beforeTag
 	}
@@ -99,7 +99,7 @@ func (s *validatorService) recursiveFindField(startAt int, beforeTag string, sli
 	return s.recursiveFindField(startAt+1, beforeTag, sliceProp2, props, field)
 }
 
-func (s *validatorService) formatProp(str string) (string, string) {
+func (s *ProtoValidatorService) formatProp(str string) (string, string) {
 	if sliceIndex := strings.IndexByte(str, '['); sliceIndex > 0 {
 		return string(str[:sliceIndex]), string(str[sliceIndex:])
 	}
@@ -107,7 +107,7 @@ func (s *validatorService) formatProp(str string) (string, string) {
 	return str, ""
 }
 
-func (s *validatorService) handleType(rType reflect.Type) reflect.Type {
+func (s *ProtoValidatorService) handleType(rType reflect.Type) reflect.Type {
 	for utils.ComparableContains(rType.Kind(), reflect.Ptr, reflect.Pointer, reflect.Slice, reflect.Array) {
 		rType = rType.Elem()
 	}
@@ -115,7 +115,7 @@ func (s *validatorService) handleType(rType reflect.Type) reflect.Type {
 	return rType
 }
 
-func (s *validatorService) toSnakeCase(str string) string {
+func (s *ProtoValidatorService) toSnakeCase(str string) string {
 	if len(str) == 0 {
 		return str
 	}
@@ -124,6 +124,6 @@ func (s *validatorService) toSnakeCase(str string) string {
 	return compile.ReplaceAllString(str, `$1`)
 }
 
-func (s *validatorService) formatTag(tag string) string {
+func (s *ProtoValidatorService) formatTag(tag string) string {
 	return strings.Split(tag, ",")[0]
 }

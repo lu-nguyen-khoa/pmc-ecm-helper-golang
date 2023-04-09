@@ -34,10 +34,10 @@ type IUserinfo interface {
 	GetPassword() string
 }
 
-type IRoleValidatorHandler interface {
+type IRoleValidatorService interface {
+	GetRoleValidatorService()
 	RefreshToken() error
-	RoleMiddleware() middleware.Middleware
-	RoleValidatorHandler()
+	GetRoleValidatorHandler() middleware.Middleware
 }
 
 type roleManager struct {
@@ -50,7 +50,7 @@ type roleManager struct {
 	authenticator  IAuthenticator
 }
 
-func (m *roleManager) RoleValidatorHandler() {}
+func (m *roleManager) GetRoleValidatorService() {}
 
 func (m *roleManager) RefreshToken() error {
 	reply, err := m.authenticator.ServiceRefreshToken(m.tokeninfo.GetTokenId(), m.tokeninfo.GetRefreshToken())
@@ -63,7 +63,7 @@ func (m *roleManager) RefreshToken() error {
 	return nil
 }
 
-func (m *roleManager) RoleMiddleware() middleware.Middleware {
+func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
 			trans, ok := transport.FromServerContext(ctx)
