@@ -43,6 +43,7 @@ func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout
 		panic(err)
 	}
 
+	log.Infof("Token ID: %s \n Access Token: %s \n Refresh Token: %s", tokeninfo.GetTokenId(), tokeninfo.GetAccessToken(), tokeninfo.GetRefreshToken())
 	result.serviceTokeninfo = tokeninfo
 	result.serviceAccessToken = tokeninfo
 	return result
