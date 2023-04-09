@@ -4,7 +4,10 @@ github.com/Pharmacity-JSC/pmc-ecm-protobuf-golang v1.0.4 h1:578m4qhGMSnZaBJOL0Av
 github.com/Pharmacity-JSC/pmc-ecm-protobuf-golang v1.0.4/go.mod h1:9glcRhhy3KABFnOSqD3RQSdWW/Av8P4Jd1X03CrFjE0=
 github.com/Pharmacity-JSC/pmc-ecm-utility-golang v1.0.3 h1:FZPyOtUrmkkwhCW7uDUraywiLmoBohyqeWKybFt/Y8M=
 github.com/Pharmacity-JSC/pmc-ecm-utility-golang v1.0.3/go.mod h1:oZMAbGyDve9hZ4SIrcDyX7OKwTAguXZOOAIUx0+ENzw=
+github.com/census-instrumentation/opencensus-proto v0.4.1 h1:iKLQ0xPNFxR/2hzXZMrBo8f1j86j5WHzznCCQxV/b8g=
+github.com/cncf/xds/go v0.0.0-20230105202645-06c439db220b h1:ACGZRIr7HsgBKHsueQ1yM4WaVaXh21ynwqsF8M8tXhA=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
+github.com/envoyproxy/go-control-plane v0.10.3 h1:xdCVXxEe0Y3FQith+0cj2irwZudqGYvecuLB1HtdexY=
 github.com/envoyproxy/protoc-gen-validate v0.9.1 h1:PS7VIOgmSVhWUEeZwTe7z7zouA22Cr590PzXKbZHOVY=
 github.com/envoyproxy/protoc-gen-validate v0.9.1/go.mod h1:OKNgG7TCp5pF4d6XftA0++PMirau2/yoOwVac3AbF2w=
 github.com/go-kratos/aegis v0.1.4 h1:rVLXJNohV1d2GUFi7TwPReF23clhaAtAzrz03IP6GMo=
