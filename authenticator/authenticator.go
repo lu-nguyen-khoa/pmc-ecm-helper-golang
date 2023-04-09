@@ -41,8 +41,8 @@ func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout
 		panic(err)
 	}
 
-	result.tokeninfo = tokeninfo
-	result.accessToken = tokeninfo
+	result.serviceTokeninfo = tokeninfo
+	result.serviceAccessToken = tokeninfo
 	return result
 }
 

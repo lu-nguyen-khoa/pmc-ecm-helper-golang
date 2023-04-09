@@ -3,6 +3,7 @@ package authenticator
 import (
 	"context"
 	"crypto/ed25519"
+	"fmt"
 	"log"
 	"net/http"
 	"reflect"
@@ -47,25 +48,25 @@ type IRoleValidatorService interface {
 }
 
 type roleManager struct {
-	publicKey      ed25519.PublicKey
-	accessTimeout  time.Duration
-	refreshTimeout time.Duration
-	userinfo       IUserinfo
-	tokeninfo      ISignInData
-	accessToken    IAccessToken
-	authenticator  IAuthenticator
+	publicKey          ed25519.PublicKey
+	accessTimeout      time.Duration
+	refreshTimeout     time.Duration
+	userinfo           IUserinfo
+	serviceTokeninfo   ISignInData
+	serviceAccessToken IAccessToken
+	authenticator      IAuthenticator
 }
 
 func (m *roleManager) GetRoleValidatorService() {}
 
 func (m *roleManager) RefreshToken() error {
-	reply, err := m.authenticator.ServiceRefreshToken(m.tokeninfo.GetTokenId(), m.tokeninfo.GetRefreshToken())
+	reply, err := m.authenticator.ServiceRefreshToken(m.serviceTokeninfo.GetTokenId(), m.serviceTokeninfo.GetRefreshToken())
 	if err != nil {
 		m.authenticator.LogError(err)
 		return err
 	}
 
-	m.accessToken = reply
+	m.serviceAccessToken = reply
 	return nil
 }
 
@@ -113,6 +114,12 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+			trans, ok := transport.FromServerContext(ctx)
+			if !ok {
+				return handler(ctx, req)
+			}
+
+			trans.RequestHeader().Set("Authorization", fmt.Sprintf("Bearer %s", m.serviceAccessToken.GetAccessToken()))
 			result, err := handler(ctx, req)
 			if err == nil {
 				return result, err

@@ -6,6 +6,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	utils "github.com/Pharmacity-JSC/pmc-ecm-utility-golang"
+	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/transport"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
@@ -69,6 +70,7 @@ func (s *localizeService) GetMessage(ctx context.Context, msgID string, template
 	config := &i18n.LocalizeConfig{MessageID: msgID}
 	message, err := localizer.Localize(config)
 	if err != nil {
+		log.Error(err)
 		return msgID
 	}
 
