@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kratos/kratos/v2/log"
 	pb "github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/internal/authentication/authenticator"
+	g_grpc "google.golang.org/grpc"
 )
 
 type AuthenticatorService struct {
@@ -15,25 +16,27 @@ type AuthenticatorService struct {
 	client pb.AuthenticatorClient
 }
 
-func NewRoleValidatorHandler(service *AuthenticatorService, userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, logger log.Logger) IRoleValidatorHandler {
+func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, authConnection *g_grpc.ClientConn, logger log.Logger) IRoleValidatorHandler {
+	log := log.NewHelper(logger)
 	var pubKey ed25519.PublicKey
 	pubKey, err := base64.StdEncoding.DecodeString(publicKey)
 	if err != nil {
-		service.LogError(err)
+		log.Error(err)
 		panic(err)
 	}
 
+	client := pb.NewAuthenticatorClient(authConnection)
 	result := &roleManager{
 		publicKey:      pubKey,
 		accessTimeout:  accessTimeout,
 		refreshTimeout: refreshTimeout,
 		userinfo:       userinfo,
-		authenticator:  service,
+		authenticator:  NewAuthenticatorService(client, logger),
 	}
 
 	tokeninfo, err := result.signIn()
 	if err != nil {
-		service.LogError(err)
+		log.Error(err)
 		panic(err)
 	}
 
