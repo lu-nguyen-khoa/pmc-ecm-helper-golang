@@ -11,11 +11,14 @@ import (
 
 	nethttp "net/http"
 
+	kerrors "github.com/go-kratos/kratos/v2/errors"
+	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport/http"
 )
 
 type IErrorEncoderService interface {
 	GetHttpErrorEncoderHandler() http.EncodeErrorFunc
+	GetGrpcErrorEncoderHandler() middleware.Middleware
 	GetErrorEncoder()
 }
 
@@ -31,6 +34,19 @@ func (s *errorEncoder) GetErrorEncoder() {}
 
 func (s *errorEncoder) GetHttpErrorEncoderHandler() http.EncodeErrorFunc {
 	return s.defaultHttpErrorEncoder
+}
+
+func (s *errorEncoder) GetGrpcErrorEncoderHandler() middleware.Middleware {
+	return func(handler middleware.Handler) middleware.Handler {
+		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+			if err == nil {
+				return handler(ctx, req)
+			}
+
+			pbError := s.handleErrorMsg(ctx, err)
+			return nil, kerrors.New(int(pbError.GetStatus()), pbError.GetCode(), pbError.GetMessage())
+		}
+	}
 }
 
 func (s *errorEncoder) defaultHttpErrorEncoder(w http.ResponseWriter, r *http.Request, err error) {

@@ -125,7 +125,8 @@ func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
 				return result, err
 			}
 
-			if utils.ComparableContains(err.Error(), "401", "402", "403", "404", "405", "406", "407", "408", "409", "410") {
+			err = utils.HandleGrpcError(err)
+			if err.Error() == "401" {
 				if errRefresh := m.RefreshToken(); errRefresh == nil {
 					result, err = handler(ctx, req)
 				}
@@ -140,11 +141,11 @@ func (m *roleManager) validateRoles(token string, moduleID int64, methodID int64
 	claims, err := m.validateTokenClaim(token, m.publicKey, m.accessTimeout)
 	if err != nil {
 		m.authenticator.LogError(err)
-		return field.NewFieldsError("401", http.StatusUnauthorized)
+		return err
 	}
 
 	if !m.hasRole(moduleID, methodID, claims.GetRoles()) {
-		return field.NewFieldsError("403", http.StatusUnauthorized)
+		return field.NewFieldsError("403", http.StatusForbidden)
 	}
 
 	return nil
@@ -217,23 +218,21 @@ func (m *roleManager) validateToken(token string, secret ed25519.PublicKey, ttl 
 	jwtToken, err := parser.Parse(token, parseHandle)
 	if err != nil {
 		log.Println(err.Error())
-		return nil, field.NewFieldsError("401", http.StatusUnauthorized)
+		return nil, field.NewFieldsError("402", http.StatusUnauthorized)
 	}
 
 	claims, ok := jwtToken.Claims.(jwt.MapClaims)
 	if !ok || !jwtToken.Valid {
-		return nil, field.NewFieldsError("402", http.StatusUnauthorized)
+		return nil, field.NewFieldsError("403", http.StatusUnauthorized)
 	}
 
 	createdAt, ok := claims["crat"].(float64)
 	if !ok {
-		return nil, field.NewFieldsError("403", http.StatusUnauthorized)
+		return nil, field.NewFieldsError("404", http.StatusUnauthorized)
 	}
 
-	now := float64(time.Now().Unix())
-	expirredAt := createdAt + float64(ttl.Milliseconds())
-	if expirredAt < now {
-		return nil, field.NewFieldsError("404", http.StatusUnauthorized)
+	if int64(createdAt+ttl.Seconds()) < time.Now().Unix() {
+		return nil, field.NewFieldsError("401", http.StatusUnauthorized)
 	}
 	return &claims, nil
 }
