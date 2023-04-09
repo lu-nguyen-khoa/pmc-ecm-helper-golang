@@ -101,7 +101,7 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 			token := m.getToken(trans.RequestHeader())
 			if err := m.validateRoles(token, moduleID, methodID); err != nil {
 				m.authenticator.LogError(err)
-				return nil, field.NewFieldsError("403", http.StatusForbidden)
+				return nil, err
 			}
 
 			return handler(ctx, req)
@@ -110,11 +110,7 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 }
 
 func (m *roleManager) validateRoles(token string, moduleID int64, methodID int64) error {
-	claims, err := m.ValidateTokenClaim(token, m.publicKey, m.accessTimeout)
-	if err != nil && err.Error() == "404" {
-		err = m.RefreshToken()
-	}
-
+	claims, err := m.validateTokenClaim(token, m.publicKey, m.accessTimeout)
 	if err != nil {
 		m.authenticator.LogError(err)
 		return field.NewFieldsError("401", http.StatusUnauthorized)
@@ -173,16 +169,16 @@ func (m *roleManager) getToken(header transport.Header) string {
 	return token
 }
 
-func (m *roleManager) ValidateTokenClaim(token string, secret ed25519.PublicKey, ttl time.Duration) (utils.IClaims, error) {
-	jwtClaims, err := m.ValidateToken(token, secret, ttl)
+func (m *roleManager) validateTokenClaim(token string, secret ed25519.PublicKey, ttl time.Duration) (utils.IClaims, error) {
+	jwtClaims, err := m.validateToken(token, secret, ttl)
 	if err != nil {
 		return nil, err
 	}
 
-	return m.GetClaimsFromJwt(jwtClaims)
+	return m.getClaimsFromJwt(jwtClaims)
 }
 
-func (m *roleManager) ValidateToken(token string, secret ed25519.PublicKey, ttl time.Duration) (*jwt.MapClaims, error) {
+func (m *roleManager) validateToken(token string, secret ed25519.PublicKey, ttl time.Duration) (*jwt.MapClaims, error) {
 	parser := jwt.Parser{
 		SkipClaimsValidation: true,
 	}
@@ -207,20 +203,20 @@ func (m *roleManager) ValidateToken(token string, secret ed25519.PublicKey, ttl 
 		return nil, field.NewFieldsError("403", http.StatusUnauthorized)
 	}
 
-	createdAt = createdAt + float64(ttl.Milliseconds())
 	now := float64(time.Now().Unix())
-	if createdAt < now {
+	expriredAt := createdAt + float64(ttl.Milliseconds())
+	if expriredAt < now {
 		return nil, field.NewFieldsError("404", http.StatusUnauthorized)
 	}
-	return &claims, err
+	return &claims, nil
 }
 
-func (m *roleManager) GetClaimsFromJwt(claims *jwt.MapClaims) (utils.IClaims, error) {
+func (m *roleManager) getClaimsFromJwt(claims *jwt.MapClaims) (utils.IClaims, error) {
 	result := &utils.Claims{}
 	userClaims := (*claims)["user"]
 	if err := mapstructure.WeakDecode(userClaims, &result); err != nil {
 		log.Println(err.Error())
-		return nil, field.NewFieldsError("405", http.StatusUnauthorized)
+		return nil, field.NewFieldsError("000", http.StatusInternalServerError)
 	}
 
 	return result, nil
