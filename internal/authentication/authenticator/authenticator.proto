@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package api.authenticator;
+import "google/api/annotations.proto";
+import "validate/validate.proto";
+import "Pharmacity-JSC/pmc-ecm-protobuf-golang/protobuf/error.proto";
+
+option go_package = "pmc-ecm-service-authentication/api/authenticator;authenticator";
+service Authenticator {
+  rpc UserSignIn(UserSignInRequest) returns (UserSignInReply) {
+    option (google.api.http) = {
+      post : "/api/authenticator/user/sign-in",
+      body : "*"
+    };
+  };
+  rpc UserRefreshToken(RefreshTokenRequest) returns (RefreshTokenReply) {
+    option (google.api.http) = {
+      get : "/api/authenticator/user/refresh-token"
+    };
+  };
+  rpc ServiceSignIn(ServiceSignInRequest) returns (ServiceSignInReply) {
+    option (google.api.http) = {
+      post : "/api/authenticator/service/sign-in",
+      body : "*"
+    };
+  };
+  rpc ServiceRefreshToken(RefreshTokenRequest) returns (RefreshTokenReply) {
+    option (google.api.http) = {
+      get : "/api/authenticator/service/refresh-token"
+    };
+  };
+}
+
+enum ESignInKind {
+  CUSTOMER = 0;
+  EMPLOYEE = 1;
+}
+
+message UserSignInRequest {
+  ESignInKind kind = 1 [ json_name = "kind" ];
+  string username = 2 [
+    json_name = "username",
+    (validate.rules).string = {min_bytes : 1, max_bytes : 256}
+  ];
+  string password = 3 [
+    json_name = "password",
+    (validate.rules).string = {min_bytes : 1, max_bytes : 256}
+  ];
+}
+
+message UserSignInData {
+  string token_id = 1 [ json_name = "token_id" ];
+  string access_token = 2 [ json_name = "access_token" ];
+  string refresh_token = 3 [ json_name = "refresh_token" ];
+}
+
+message UserSignInReply {
+  oneof inner {
+    pharmacity.protobuf.Error error = 1 [ json_name = "error" ];
+    UserSignInData data = 2;
+  };
+}
+
+message ServiceSignInRequest {
+  string username = 2 [
+    json_name = "username",
+    (validate.rules).string = {min_bytes : 1, max_bytes : 256}
+  ];
+  string password = 3 [
+    json_name = "password",
+    (validate.rules).string = {min_bytes : 1, max_bytes : 256}
+  ];
+}
+
+message ServiceSignInData {
+  string token_id = 1 [ json_name = "token_id" ];
+  string access_token = 2 [ json_name = "access_token" ];
+  string refresh_token = 3 [ json_name = "refresh_token" ];
+}
+
+message ServiceSignInReply {
+  oneof inner {
+    pharmacity.protobuf.Error error = 1 [ json_name = "error" ];
+    ServiceSignInData data = 2;
+  };
+}
+
+message RefreshTokenRequest {
+  string token_id = 1
+      [ json_name = "token_id", (validate.rules).string = {min_bytes : 1} ];
+  string refresh_token = 2 [
+    json_name = "refresh_token",
+    (validate.rules).string = {min_bytes : 1}
+  ];
+}
+
+message RefreshTokenData {
+  string access_token = 1 [ json_name = "access_token" ];
+}
+
+message RefreshTokenReply {
+  oneof inner {
+    pharmacity.protobuf.Error error = 1 [ json_name = "error" ];
+    RefreshTokenData data = 2;
+  };
+}
