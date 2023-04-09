@@ -27,7 +27,7 @@ type localizeService struct {
 	langs map[string]*i18n.Localizer
 }
 
-func NewLocalizeConfig(configs ...ILocalConfig) ILocalizeService {
+func NewLocalizeService(configs ...ILocalConfig) ILocalizeService {
 	langs := map[string]*i18n.Localizer{}
 	for _, e := range configs {
 		bundle := i18n.NewBundle(language.Make(e.GetMessageTag()))
