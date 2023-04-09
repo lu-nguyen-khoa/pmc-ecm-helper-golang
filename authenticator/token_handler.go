@@ -15,6 +15,7 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
 	jwt "github.com/golang-jwt/jwt/v4"
+	error_encoder "github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/error"
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/field"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/grpc/status"
@@ -49,6 +50,7 @@ type IRoleValidatorService interface {
 }
 
 type roleManager struct {
+	errorEncoder       error_encoder.IErrorEncoderService
 	publicKey          ed25519.PublicKey
 	accessTimeout      time.Duration
 	refreshTimeout     time.Duration
@@ -104,7 +106,7 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 			token := m.getToken(trans.RequestHeader())
 			if err := m.validateRoles(token, moduleID, methodID); err != nil {
 				m.authenticator.LogError(err)
-				return nil, err
+				return nil, m.errorEncoder.HandlerGrpcError(ctx, err)
 			}
 
 			return handler(ctx, req)

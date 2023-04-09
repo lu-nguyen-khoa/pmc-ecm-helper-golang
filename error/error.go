@@ -19,6 +19,7 @@ import (
 type IErrorEncoderService interface {
 	GetHttpErrorEncoderHandler() http.EncodeErrorFunc
 	GetGrpcErrorEncoderHandler() middleware.Middleware
+	HandlerGrpcError(context.Context, error) error
 	GetErrorEncoder()
 }
 
@@ -49,6 +50,15 @@ func (s *errorEncoder) GetGrpcErrorEncoderHandler() middleware.Middleware {
 	}
 }
 
+func (s *errorEncoder) HandlerGrpcError(ctx context.Context, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	pbError := s.handleErrorMsg(ctx, err)
+	return kerrors.New(int(pbError.GetStatus()), pbError.GetCode(), pbError.GetMessage())
+}
+
 func (s *errorEncoder) defaultHttpErrorEncoder(w http.ResponseWriter, r *http.Request, err error) {
 	context := r.Context()
 	pbError := s.handleErrorMsg(context, err)
@@ -69,7 +79,7 @@ func (s *errorEncoder) handleErrorMsg(ctx context.Context, err error) *pb.Error 
 		result := &pb.Error{
 			Code:    pmcErr.Error(),
 			Status:  int32(pmcErr.GetStatus()),
-			Message: s.localize.GetMessage(ctx, pmcErr.Error()),
+			Message: s.localize.MessageFromContext(ctx, pmcErr.Error()),
 		}
 		return result
 	}
@@ -78,7 +88,7 @@ func (s *errorEncoder) handleErrorMsg(ctx context.Context, err error) *pb.Error 
 		result := &pb.Error{
 			Code:    fieldError.Error(),
 			Status:  int32(fieldError.Status()),
-			Message: s.localize.GetMessage(ctx, fieldError.Error(), fieldError.Fields()...),
+			Message: s.localize.MessageFromContext(ctx, fieldError.Error(), fieldError.Fields()...),
 		}
 		return result
 	}
@@ -86,6 +96,6 @@ func (s *errorEncoder) handleErrorMsg(ctx context.Context, err error) *pb.Error 
 	return &pb.Error{
 		Code:    err.Error(),
 		Status:  nethttp.StatusInternalServerError,
-		Message: s.localize.GetMessage(ctx, err.Error()),
+		Message: s.localize.MessageFromContext(ctx, err.Error()),
 	}
 }

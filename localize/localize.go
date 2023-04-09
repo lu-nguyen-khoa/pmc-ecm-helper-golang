@@ -21,7 +21,8 @@ type ILocalConfig interface {
 
 type ILocalizeService interface {
 	GetLocalizeService()
-	GetMessage(ctx context.Context, msgID string, template ...interface{}) string
+	MessageFromLocale(string, string, ...interface{}) string
+	MessageFromContext(context.Context, string, ...interface{}) string
 }
 
 type localizeService struct {
@@ -41,29 +42,18 @@ func NewLocalizeService(configs ...ILocalConfig) ILocalizeService {
 
 func (s *localizeService) GetLocalizeService() {}
 
-func (s *localizeService) FindLang(context context.Context) string {
-	ctx, ok := transport.FromServerContext(context)
+func (s *localizeService) MessageFromContext(ctx context.Context, msgID string, template ...interface{}) string {
+	trans, ok := transport.FromServerContext(ctx)
 	if !ok {
-		return "vi"
+		return msgID
 	}
 
-	lang := ctx.RequestHeader().Get("accept-language")
-	return lang
+	return s.MessageFromLocale(trans.RequestHeader().Get("Accept-Language"), msgID, template...)
 }
 
-func (s *localizeService) FindLocalize(context context.Context) *i18n.Localizer {
-	lang := s.FindLang(context)
-	result, exists := s.langs[lang]
+func (s *localizeService) MessageFromLocale(locale string, msgID string, template ...interface{}) string {
+	localizer, exists := s.langs[locale]
 	if !exists {
-		return nil
-	}
-
-	return result
-}
-
-func (s *localizeService) GetMessage(ctx context.Context, msgID string, template ...interface{}) string {
-	localizer := s.FindLocalize(ctx)
-	if localizer == nil {
 		return msgID
 	}
 
