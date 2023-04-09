@@ -114,7 +114,7 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
-			trans, ok := transport.FromServerContext(ctx)
+			trans, ok := transport.FromClientContext(ctx)
 			if !ok {
 				return handler(ctx, req)
 			}
