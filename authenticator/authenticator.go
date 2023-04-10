@@ -23,7 +23,7 @@ type AuthenticatorService struct {
 	client pb.AuthenticatorClient
 }
 
-func NewRoleValidatorService(authConnection *g_grpc.ClientConn, errEncoder error_encoder.IErrorEncoderService, userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, logger log.Logger) IRoleValidatorService {
+func NewRoleValidatorService(authenConnection *g_grpc.ClientConn, errEncoder error_encoder.IErrorEncoderService, userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, logger log.Logger) IRoleValidatorService {
 	log := log.NewHelper(logger)
 	var pubKey ed25519.PublicKey
 	pubKey, err := base64.StdEncoding.DecodeString(publicKey)
@@ -32,14 +32,17 @@ func NewRoleValidatorService(authConnection *g_grpc.ClientConn, errEncoder error
 		panic(err)
 	}
 
-	client := pb.NewAuthenticatorClient(authConnection)
 	result := &roleManager{
 		errorEncoder:   errEncoder,
 		publicKey:      pubKey,
 		accessTimeout:  accessTimeout,
 		refreshTimeout: refreshTimeout,
 		userinfo:       userinfo,
-		authenticator:  &AuthenticatorService{client: client, log: log},
+	}
+
+	if authenConnection != nil {
+		client := pb.NewAuthenticatorClient(authenConnection)
+		result.authenticator = &AuthenticatorService{client: client, log: log}
 	}
 
 	tokeninfo, err := result.signIn()
