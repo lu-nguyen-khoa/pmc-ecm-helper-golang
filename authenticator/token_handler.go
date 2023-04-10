@@ -58,7 +58,7 @@ type roleManager struct {
 func (m *roleManager) GetRoleValidatorService() {}
 
 func (m *roleManager) RefreshToken() error {
-	reply, err := m.authenticator.ServiceRefreshToken(m.serviceTokeninfo.GetTokenId(), m.serviceTokeninfo.GetRefreshToken())
+	reply, err := m.authenticator.InternalServiceRefreshToken(m.serviceTokeninfo.GetTokenId(), m.serviceTokeninfo.GetRefreshToken())
 	if err != nil {
 		m.authenticator.LogError(err)
 		return err
@@ -198,7 +198,7 @@ func (m *roleManager) hasRole(roleID int64, index int64, roles map[int64]string)
 }
 
 func (m *roleManager) signIn() (ISignInData, error) {
-	reply, err := m.authenticator.ServiceSignIn(m.userinfo.GetUsername(), m.userinfo.GetPassword())
+	reply, err := m.authenticator.InternalServiceSignIn(m.userinfo.GetUsername(), m.userinfo.GetPassword())
 	if err != nil {
 		m.authenticator.LogError(err)
 		panic(err)

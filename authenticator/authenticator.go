@@ -13,8 +13,8 @@ import (
 )
 
 type IAuthenticator interface {
-	ServiceSignIn(string, string) (ISignInData, error)
-	ServiceRefreshToken(string, string) (IAccessToken, error)
+	InternalServiceSignIn(string, string) (ISignInData, error)
+	InternalServiceRefreshToken(string, string) (IAccessToken, error)
 	LogError(error)
 }
 
@@ -59,7 +59,7 @@ func NewRoleValidatorService(authen IAuthenticator, authConnection *g_grpc.Clien
 	return result
 }
 
-func (s *AuthenticatorService) ServiceSignIn(username string, password string) (ISignInData, error) {
+func (s *AuthenticatorService) InternalServiceSignIn(username string, password string) (ISignInData, error) {
 	pbRequest := &pb.ServiceSignInRequest{Username: username, Password: password}
 	reply, err := s.client.ServiceSignIn(context.Background(), pbRequest)
 	if err != nil {
@@ -70,7 +70,7 @@ func (s *AuthenticatorService) ServiceSignIn(username string, password string) (
 	return reply.GetData(), nil
 }
 
-func (s *AuthenticatorService) ServiceRefreshToken(tokenID string, refreshToken string) (IAccessToken, error) {
+func (s *AuthenticatorService) InternalServiceRefreshToken(tokenID string, refreshToken string) (IAccessToken, error) {
 	pbRequest := &pb.RefreshTokenRequest{TokenId: tokenID, RefreshToken: refreshToken}
 	reply, err := s.client.ServiceRefreshToken(context.Background(), pbRequest)
 	if err != nil {
