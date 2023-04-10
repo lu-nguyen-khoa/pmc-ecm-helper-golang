@@ -135,19 +135,19 @@ func (m *roleValidatorService) GetRoleValidatorHandler() middleware.Middleware {
 			moduleID, err := strconv.ParseInt(config.Tag.Get("module_id"), 10, 64)
 			if err != nil {
 				m.authenticator.LogError(err)
-				return nil, field.NewFieldsError("430", http.StatusNotImplemented)
+				return nil, m.errorEncoder.HandlerErrorMessage(ctx, field.NewFieldsError("430", http.StatusNotImplemented))
 			}
 
 			methodIndex, err := strconv.ParseInt(config.Tag.Get("method_id"), 10, 64)
 			if err != nil {
 				m.authenticator.LogError(err)
-				return nil, field.NewFieldsError("431", http.StatusNotImplemented)
+				return nil, m.errorEncoder.HandlerErrorMessage(ctx, field.NewFieldsError("431", http.StatusNotImplemented))
 			}
 
 			token := m.getToken(trans.RequestHeader())
 			if err := m.validateRoles(token, moduleID, methodIndex); err != nil {
 				m.authenticator.LogError(err)
-				return nil, err
+				return nil, m.errorEncoder.HandlerErrorMessage(ctx, err)
 			}
 
 			return handler(ctx, req)
