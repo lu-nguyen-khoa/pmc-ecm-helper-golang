@@ -19,7 +19,8 @@ import (
 type IErrorEncoderService interface {
 	GetHttpErrorEncoderHandler() http.EncodeErrorFunc
 	GetGrpcErrorEncoderHandler() middleware.Middleware
-	HandlerGrpcError(context.Context, error) error
+	HandlerErrorGRPC(context.Context, error) *pb.Error
+	HandlerErrorMessage(context.Context, error) utils.IPMCError
 	GetErrorEncoder()
 }
 
@@ -50,13 +51,22 @@ func (s *errorEncoder) GetGrpcErrorEncoderHandler() middleware.Middleware {
 	}
 }
 
-func (s *errorEncoder) HandlerGrpcError(ctx context.Context, err error) error {
+func (s *errorEncoder) HandlerErrorGRPC(ctx context.Context, err error) *pb.Error {
+	if err == nil {
+		return nil
+	}
+
+	return s.handleErrorMsg(ctx, err)
+}
+
+func (s *errorEncoder) HandlerErrorMessage(ctx context.Context, err error) utils.IPMCError {
 	if err == nil {
 		return nil
 	}
 
 	pbError := s.handleErrorMsg(ctx, err)
-	return kerrors.New(int(pbError.GetStatus()), pbError.GetCode(), pbError.GetMessage())
+
+	return utils.New(pbError.GetCode(), int(pbError.GetStatus()), pbError.GetMessage())
 }
 
 func (s *errorEncoder) defaultHttpErrorEncoder(w http.ResponseWriter, r *http.Request, err error) {
