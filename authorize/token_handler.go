@@ -1,10 +1,10 @@
-package authenticator
+package authorize
 
 import (
 	"context"
 	"crypto/ed25519"
+	"encoding/base64"
 	"fmt"
-	"log"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	utils "github.com/Pharmacity-JSC/pmc-ecm-utility-golang"
+	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -37,6 +38,12 @@ type IUserinfo interface {
 	GetPassword() string
 }
 
+type IAuthenticator interface {
+	InternalServiceSignIn(string, string) (ISignInData, error)
+	InternalServiceRefreshToken(string, string) (IAccessToken, error)
+	LogError(error)
+}
+
 type IRoleValidatorService interface {
 	GetRoleValidatorService()
 	SetAuthenticator(IAuthenticator)
@@ -45,7 +52,8 @@ type IRoleValidatorService interface {
 	GetTokenExpiredHandler() middleware.Middleware
 }
 
-type roleManager struct {
+type roleValidatorService struct {
+	logger             *log.Helper
 	errorEncoder       error_encoder.IErrorEncoderService
 	publicKey          ed25519.PublicKey
 	accessTimeout      time.Duration
@@ -56,13 +64,43 @@ type roleManager struct {
 	authenticator      IAuthenticator
 }
 
-func (m *roleManager) GetRoleValidatorService() {}
+func NewRoleValidatorService(errEncoder error_encoder.IErrorEncoderService, userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, logger log.Logger) IRoleValidatorService {
+	logHelper := log.NewHelper(logger)
+	var pubKey ed25519.PublicKey
+	pubKey, err := base64.StdEncoding.DecodeString(publicKey)
+	if err != nil {
+		logHelper.Error(err)
+		panic(err)
+	}
 
-func (m *roleManager) SetAuthenticator(authenService IAuthenticator) {
+	result := &roleValidatorService{
+		logger:         logHelper,
+		errorEncoder:   errEncoder,
+		publicKey:      pubKey,
+		accessTimeout:  accessTimeout,
+		refreshTimeout: refreshTimeout,
+		userinfo:       userinfo,
+	}
+
+	tokeninfo, err := result.signIn()
+	if err != nil {
+		logHelper.Error(err)
+		panic(err)
+	}
+
+	result.logger.Infof("Token ID: %s\nAccess Token: %s\nRefresh Token: %s", tokeninfo.GetTokenId(), tokeninfo.GetAccessToken(), tokeninfo.GetRefreshToken())
+	result.serviceTokeninfo = tokeninfo
+	result.serviceAccessToken = tokeninfo
+	return result
+}
+
+func (m *roleValidatorService) GetRoleValidatorService() {}
+
+func (m *roleValidatorService) SetAuthenticator(authenService IAuthenticator) {
 	m.authenticator = authenService
 }
 
-func (m *roleManager) RefreshToken() error {
+func (m *roleValidatorService) RefreshToken() error {
 	reply, err := m.authenticator.InternalServiceRefreshToken(m.serviceTokeninfo.GetTokenId(), m.serviceTokeninfo.GetRefreshToken())
 	if err != nil {
 		m.authenticator.LogError(err)
@@ -73,7 +111,7 @@ func (m *roleManager) RefreshToken() error {
 	return nil
 }
 
-func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
+func (m *roleValidatorService) GetRoleValidatorHandler() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
 			trans, ok := transport.FromServerContext(ctx)
@@ -114,7 +152,7 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 	}
 }
 
-func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
+func (m *roleValidatorService) GetTokenExpiredHandler() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
 			trans, ok := transport.FromClientContext(ctx)
@@ -163,7 +201,7 @@ func (m *roleManager) GetTokenExpiredHandler() middleware.Middleware {
 	}
 }
 
-func (m *roleManager) validateRoles(token string, moduleID int64, methodID int64) error {
+func (m *roleValidatorService) validateRoles(token string, moduleID int64, methodID int64) error {
 	claims, err := m.validateTokenClaim(token, m.publicKey, m.accessTimeout)
 	if err != nil {
 		m.authenticator.LogError(err)
@@ -177,7 +215,7 @@ func (m *roleManager) validateRoles(token string, moduleID int64, methodID int64
 	return nil
 }
 
-func (m *roleManager) hasRole(roleID int64, index int64, roles map[int64]string) bool {
+func (m *roleValidatorService) hasRole(roleID int64, index int64, roles map[int64]string) bool {
 	if roles == nil {
 		return false
 	}
@@ -202,7 +240,7 @@ func (m *roleManager) hasRole(roleID int64, index int64, roles map[int64]string)
 	return role[index] == '1'
 }
 
-func (m *roleManager) signIn() (ISignInData, error) {
+func (m *roleValidatorService) signIn() (ISignInData, error) {
 	reply, err := m.authenticator.InternalServiceSignIn(m.userinfo.GetUsername(), m.userinfo.GetPassword())
 	if err != nil {
 		m.authenticator.LogError(err)
@@ -212,7 +250,7 @@ func (m *roleManager) signIn() (ISignInData, error) {
 	return reply, nil
 }
 
-func (m *roleManager) getToken(header transport.Header) string {
+func (m *roleValidatorService) getToken(header transport.Header) string {
 	token := header.Get("Authorization")
 	fields := strings.Fields(token)
 
@@ -223,7 +261,7 @@ func (m *roleManager) getToken(header transport.Header) string {
 	return token
 }
 
-func (m *roleManager) validateTokenClaim(token string, secret ed25519.PublicKey, ttl time.Duration) (utils.IClaims, error) {
+func (m *roleValidatorService) validateTokenClaim(token string, secret ed25519.PublicKey, ttl time.Duration) (utils.IClaims, error) {
 	jwtClaims, err := m.validateToken(token, secret, ttl)
 	if err != nil {
 		return nil, err
@@ -232,7 +270,7 @@ func (m *roleManager) validateTokenClaim(token string, secret ed25519.PublicKey,
 	return m.getClaimsFromJwt(jwtClaims)
 }
 
-func (m *roleManager) validateToken(token string, secret ed25519.PublicKey, ttl time.Duration) (*jwt.MapClaims, error) {
+func (m *roleValidatorService) validateToken(token string, secret ed25519.PublicKey, ttl time.Duration) (*jwt.MapClaims, error) {
 	parser := jwt.Parser{
 		SkipClaimsValidation: true,
 	}
@@ -243,7 +281,7 @@ func (m *roleManager) validateToken(token string, secret ed25519.PublicKey, ttl 
 
 	jwtToken, err := parser.Parse(token, parseHandle)
 	if err != nil {
-		log.Println(err.Error())
+		m.logger.Error(err)
 		return nil, field.NewFieldsError("402", http.StatusUnauthorized)
 	}
 
@@ -263,11 +301,11 @@ func (m *roleManager) validateToken(token string, secret ed25519.PublicKey, ttl 
 	return &claims, nil
 }
 
-func (m *roleManager) getClaimsFromJwt(claims *jwt.MapClaims) (utils.IClaims, error) {
+func (m *roleValidatorService) getClaimsFromJwt(claims *jwt.MapClaims) (utils.IClaims, error) {
 	result := &utils.Claims{}
 	userClaims := (*claims)["user"]
 	if err := mapstructure.WeakDecode(userClaims, &result); err != nil {
-		log.Println(err.Error())
+		m.logger.Error(err)
 		return nil, field.NewFieldsError("000", http.StatusInternalServerError)
 	}
 
