@@ -6,11 +6,19 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/authorize"
 	pb "github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/internal/authentication/authenticator"
+	g_grpc "google.golang.org/grpc"
 )
 
 type AuthenticatorService struct {
 	log    *log.Helper
 	client pb.AuthenticatorClient
+}
+
+func NewAuthenticatorService(conn *g_grpc.ClientConn, logger log.Logger) *AuthenticatorService {
+	return &AuthenticatorService{
+		client: pb.NewAuthenticatorClient(conn),
+		log:    log.NewHelper(logger),
+	}
 }
 
 func (s *AuthenticatorService) InternalServiceSignIn(username string, password string) (authorize.ISignInData, error) {
