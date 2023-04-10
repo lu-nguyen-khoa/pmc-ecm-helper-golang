@@ -3,10 +3,10 @@ package helper
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"strings"
 	"time"
 
+	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
@@ -42,7 +42,7 @@ func CreateConnection(endpoint string, timeout time.Duration, middlewares []midd
 	)
 
 	if err != nil {
-		fmt.Printf("CreateConnection connection error: %v. EndPoint: %v", err, endpoint)
+		log.Errorf("CreateConnection connection error: %v. EndPoint: %v", err, endpoint)
 	}
 
 	return conn

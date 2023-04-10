@@ -8,6 +8,7 @@ import (
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/context_handler"
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/field"
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/localize"
+	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/pmcerror"
 
 	nethttp "net/http"
 
@@ -20,7 +21,7 @@ type IErrorEncoderService interface {
 	GetHttpErrorEncoderHandler() http.EncodeErrorFunc
 	GetGrpcErrorEncoderHandler() middleware.Middleware
 	HandlerErrorGRPC(context.Context, error) *pb.Error
-	HandlerErrorMessage(context.Context, error) utils.IPMCError
+	HandlerErrorMessage(context.Context, error) pmcerror.IPMCError
 	GetErrorEncoder()
 }
 
@@ -59,7 +60,7 @@ func (s *errorEncoder) HandlerErrorGRPC(ctx context.Context, err error) *pb.Erro
 	return s.handleErrorMsg(ctx, err)
 }
 
-func (s *errorEncoder) HandlerErrorMessage(ctx context.Context, err error) utils.IPMCError {
+func (s *errorEncoder) HandlerErrorMessage(ctx context.Context, err error) pmcerror.IPMCError {
 	if err == nil {
 		return nil
 	}
@@ -85,7 +86,7 @@ func (s *errorEncoder) defaultHttpErrorEncoder(w http.ResponseWriter, r *http.Re
 }
 
 func (s *errorEncoder) handleErrorMsg(ctx context.Context, err error) *pb.Error {
-	if pmcErr, ok := err.(utils.IPMCError); ok {
+	if pmcErr, ok := err.(pmcerror.IPMCError); ok {
 		result := &pb.Error{
 			Code:    pmcErr.Error(),
 			Status:  int32(pmcErr.GetStatus()),

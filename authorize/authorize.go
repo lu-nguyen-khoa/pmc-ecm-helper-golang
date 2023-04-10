@@ -18,6 +18,7 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 	error_encoder "github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/error"
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/field"
+	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/pmcerror"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -181,7 +182,7 @@ func (m *roleValidatorService) GetTokenExpiredHandler() middleware.Middleware {
 				}
 			}
 
-			if errPmc, ok := err.(utils.IPMCError); ok {
+			if errPmc, ok := err.(pmcerror.IPMCError); ok {
 				if errPmc.GetStatus() == http.StatusUnauthorized {
 					if errRefresh := m.RefreshToken(); errRefresh == nil {
 						return handler(ctx, req)
