@@ -52,11 +52,11 @@ func (s *ProtoValidatorService) GetProtoValidatorHandler() middleware.Middleware
 			if v, ok := req.(iProtoValidator); ok {
 				if err := v.Validate(); err != nil {
 					if validErr, ok := err.(iProtoValidateError); ok {
-						return nil, s.errorEncoder.HandlerErrorMessage(ctx, s.handleValidationError(validErr, reflect.TypeOf(req)))
+						return nil, s.handleValidationError(validErr, reflect.TypeOf(req))
 					}
 
 					s.logger.Error(err)
-					return nil, s.errorEncoder.HandlerErrorMessage(ctx, field.NewFieldsError("888", http.StatusBadRequest, "UNKNOWN"))
+					return nil, field.NewFieldsError("888", http.StatusBadRequest, "UNKNOWN")
 				}
 			}
 			return handler(ctx, req)
