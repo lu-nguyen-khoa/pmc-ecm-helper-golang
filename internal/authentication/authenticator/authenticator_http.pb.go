@@ -19,10 +19,10 @@ var _ = binding.EncodeURL
 
 const _ = http.SupportPackageIsVersion1
 
-const OperationAuthenticatorServiceRefreshToken = "/api.authenticator.Authenticator/ServiceRefreshToken"
-const OperationAuthenticatorServiceSignIn = "/api.authenticator.Authenticator/ServiceSignIn"
-const OperationAuthenticatorUserRefreshToken = "/api.authenticator.Authenticator/UserRefreshToken"
-const OperationAuthenticatorUserSignIn = "/api.authenticator.Authenticator/UserSignIn"
+const OperationAuthenticatorServiceRefreshToken = "/pharmacity.authentication.authenticator.Authenticator/ServiceRefreshToken"
+const OperationAuthenticatorServiceSignIn = "/pharmacity.authentication.authenticator.Authenticator/ServiceSignIn"
+const OperationAuthenticatorUserRefreshToken = "/pharmacity.authentication.authenticator.Authenticator/UserRefreshToken"
+const OperationAuthenticatorUserSignIn = "/pharmacity.authentication.authenticator.Authenticator/UserSignIn"
 
 type AuthenticatorHTTPServer interface {
 	ServiceRefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenReply, error)

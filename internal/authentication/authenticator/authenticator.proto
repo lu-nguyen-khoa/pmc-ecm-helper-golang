@@ -1,11 +1,13 @@
 syntax = "proto3";
 
-package api.authenticator;
+package pharmacity.authentication.authenticator;
+
 import "google/api/annotations.proto";
 import "validate/validate.proto";
 import "Pharmacity-JSC/pmc-ecm-protobuf-golang/protobuf/error.proto";
 
 option go_package = "pmc-ecm-service-authentication/api/authenticator;authenticator";
+
 service Authenticator {
   rpc UserSignIn(UserSignInRequest) returns (UserSignInReply) {
     option (google.api.http) = {

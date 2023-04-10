@@ -19,10 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Authenticator_UserSignIn_FullMethodName          = "/api.authenticator.Authenticator/UserSignIn"
-	Authenticator_UserRefreshToken_FullMethodName    = "/api.authenticator.Authenticator/UserRefreshToken"
-	Authenticator_ServiceSignIn_FullMethodName       = "/api.authenticator.Authenticator/ServiceSignIn"
-	Authenticator_ServiceRefreshToken_FullMethodName = "/api.authenticator.Authenticator/ServiceRefreshToken"
+	Authenticator_UserSignIn_FullMethodName          = "/pharmacity.authentication.authenticator.Authenticator/UserSignIn"
+	Authenticator_UserRefreshToken_FullMethodName    = "/pharmacity.authentication.authenticator.Authenticator/UserRefreshToken"
+	Authenticator_ServiceSignIn_FullMethodName       = "/pharmacity.authentication.authenticator.Authenticator/ServiceSignIn"
+	Authenticator_ServiceRefreshToken_FullMethodName = "/pharmacity.authentication.authenticator.Authenticator/ServiceRefreshToken"
 )
 
 // AuthenticatorClient is the client API for Authenticator service.
@@ -195,7 +195,7 @@ func _Authenticator_ServiceRefreshToken_Handler(srv interface{}, ctx context.Con
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Authenticator_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "api.authenticator.Authenticator",
+	ServiceName: "pharmacity.authentication.authenticator.Authenticator",
 	HandlerType: (*AuthenticatorServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
