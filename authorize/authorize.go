@@ -81,16 +81,6 @@ func NewRoleValidatorService(errEncoder error_encoder.IErrorEncoderService, user
 		refreshTimeout: refreshTimeout,
 		userinfo:       userinfo,
 	}
-
-	tokeninfo, err := result.signIn()
-	if err != nil {
-		logHelper.Error(err)
-		panic(err)
-	}
-
-	result.logger.Infof("Token ID: %s\nAccess Token: %s\nRefresh Token: %s", tokeninfo.GetTokenId(), tokeninfo.GetAccessToken(), tokeninfo.GetRefreshToken())
-	result.serviceTokeninfo = tokeninfo
-	result.serviceAccessToken = tokeninfo
 	return result
 }
 
@@ -98,6 +88,15 @@ func (m *roleValidatorService) GetRoleValidatorService() {}
 
 func (m *roleValidatorService) SetAuthenticator(authenService IAuthenticator) {
 	m.authenticator = authenService
+	tokeninfo, err := m.signIn()
+	if err != nil {
+		m.logger.Error(err)
+		panic(err)
+	}
+
+	m.logger.Infof("Token ID: %s\nAccess Token: %s\nRefresh Token: %s", tokeninfo.GetTokenId(), tokeninfo.GetAccessToken(), tokeninfo.GetRefreshToken())
+	m.serviceTokeninfo = tokeninfo
+	m.serviceAccessToken = tokeninfo
 }
 
 func (m *roleValidatorService) RefreshToken() error {
