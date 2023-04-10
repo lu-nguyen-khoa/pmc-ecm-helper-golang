@@ -32,12 +32,6 @@ type IAccessToken interface {
 	GetAccessToken() string
 }
 
-type IAuthenticator interface {
-	ServiceSignIn(string, string) (ISignInData, error)
-	ServiceRefreshToken(string, string) (IAccessToken, error)
-	LogError(error)
-}
-
 type IUserinfo interface {
 	GetUsername() string
 	GetPassword() string
@@ -92,22 +86,22 @@ func (m *roleManager) GetRoleValidatorHandler() middleware.Middleware {
 				return handler(ctx, req)
 			}
 
-			methodID, err := strconv.ParseInt(config.Tag.Get("method_id"), 10, 64)
-			if err != nil {
-				m.authenticator.LogError(err)
-				return nil, field.NewFieldsError("000", http.StatusForbidden)
-			}
-
 			moduleID, err := strconv.ParseInt(config.Tag.Get("module_id"), 10, 64)
 			if err != nil {
 				m.authenticator.LogError(err)
-				return nil, field.NewFieldsError("000", http.StatusForbidden)
+				return nil, field.NewFieldsError("430", http.StatusNotImplemented)
+			}
+
+			methodIndex, err := strconv.ParseInt(config.Tag.Get("method_id"), 10, 64)
+			if err != nil {
+				m.authenticator.LogError(err)
+				return nil, field.NewFieldsError("431", http.StatusNotImplemented)
 			}
 
 			token := m.getToken(trans.RequestHeader())
-			if err := m.validateRoles(token, moduleID, methodID); err != nil {
+			if err := m.validateRoles(token, moduleID, methodIndex); err != nil {
 				m.authenticator.LogError(err)
-				return nil, m.errorEncoder.HandlerGrpcError(ctx, err)
+				return nil, err
 			}
 
 			return handler(ctx, req)

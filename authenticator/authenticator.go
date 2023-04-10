@@ -12,12 +12,18 @@ import (
 	g_grpc "google.golang.org/grpc"
 )
 
+type IAuthenticator interface {
+	ServiceSignIn(string, string) (ISignInData, error)
+	ServiceRefreshToken(string, string) (IAccessToken, error)
+	LogError(error)
+}
+
 type AuthenticatorService struct {
 	log    *log.Helper
 	client pb.AuthenticatorClient
 }
 
-func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, authConnection *g_grpc.ClientConn, errEncoder error_encoder.IErrorEncoderService, logger log.Logger) IRoleValidatorService {
+func NewRoleValidatorService(authen IAuthenticator, authConnection *g_grpc.ClientConn, errEncoder error_encoder.IErrorEncoderService, userinfo IUserinfo, publicKey string, accessTimeout time.Duration, refreshTimeout time.Duration, logger log.Logger) IRoleValidatorService {
 	log := log.NewHelper(logger)
 	var pubKey ed25519.PublicKey
 	pubKey, err := base64.StdEncoding.DecodeString(publicKey)
@@ -27,7 +33,11 @@ func NewRoleValidatorHandler(userinfo IUserinfo, publicKey string, accessTimeout
 	}
 
 	client := pb.NewAuthenticatorClient(authConnection)
-	service := &AuthenticatorService{client: client, log: log}
+	service := authen
+	if authen == nil {
+		service = &AuthenticatorService{client: client, log: log}
+	}
+
 	result := &roleManager{
 		errorEncoder:   errEncoder,
 		publicKey:      pubKey,
