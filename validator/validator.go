@@ -9,8 +9,9 @@ import (
 	"strings"
 
 	utils "github.com/Pharmacity-JSC/pmc-ecm-utility-golang"
-	"github.com/go-kratos/kratos/v2/errors"
+	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware"
+	error_encoder "github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/error"
 	"github.com/lu-nguyen-khoa/pmc-ecm-helper-golang/field"
 )
 
@@ -31,11 +32,16 @@ type IProtoValidatorService interface {
 	GetProtoValidatorHandler() middleware.Middleware
 }
 
-func NewProtoValidatorService() IProtoValidatorService {
-	return &ProtoValidatorService{}
+type ProtoValidatorService struct {
+	logger       *log.Helper
+	errorEncoder error_encoder.IErrorEncoderService
 }
 
-type ProtoValidatorService struct {
+func NewProtoValidatorService(errEncoder error_encoder.IErrorEncoderService, logger log.Logger) IProtoValidatorService {
+	return &ProtoValidatorService{
+		errorEncoder: errEncoder,
+		logger:       log.NewHelper(logger),
+	}
 }
 
 func (s *ProtoValidatorService) GetProtoValidatorService() {}
@@ -46,9 +52,11 @@ func (s *ProtoValidatorService) GetProtoValidatorHandler() middleware.Middleware
 			if v, ok := req.(iProtoValidator); ok {
 				if err := v.Validate(); err != nil {
 					if validErr, ok := err.(iProtoValidateError); ok {
-						return nil, s.handleValidationError(validErr, reflect.TypeOf(req))
+						return nil, s.errorEncoder.HandlerErrorMessage(ctx, s.handleValidationError(validErr, reflect.TypeOf(req)))
 					}
-					return nil, errors.BadRequest("VALIDATOR", err.Error()).WithCause(err)
+
+					s.logger.Error(err)
+					return nil, s.errorEncoder.HandlerErrorMessage(ctx, field.NewFieldsError("888", http.StatusBadRequest, "UNKNOWN"))
 				}
 			}
 			return handler(ctx, req)
