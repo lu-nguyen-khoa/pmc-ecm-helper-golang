@@ -113,6 +113,10 @@ func (m *roleValidatorService) RefreshToken() error {
 func (m *roleValidatorService) GetRoleValidatorHandler() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+			if m.authenticator == nil {
+				return handler(ctx, req)
+			}
+
 			trans, ok := transport.FromServerContext(ctx)
 			if !ok {
 				return handler(ctx, req)
@@ -154,6 +158,10 @@ func (m *roleValidatorService) GetRoleValidatorHandler() middleware.Middleware {
 func (m *roleValidatorService) GetTokenExpiredHandler() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+			if m.serviceAccessToken == nil {
+				return handler(ctx, req)
+			}
+
 			trans, ok := transport.FromClientContext(ctx)
 			if !ok {
 				return handler(ctx, req)
