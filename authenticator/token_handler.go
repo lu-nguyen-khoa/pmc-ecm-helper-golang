@@ -39,6 +39,7 @@ type IUserinfo interface {
 
 type IRoleValidatorService interface {
 	GetRoleValidatorService()
+	SetAuthenticator(IAuthenticator)
 	RefreshToken() error
 	GetRoleValidatorHandler() middleware.Middleware
 	GetTokenExpiredHandler() middleware.Middleware
@@ -56,6 +57,10 @@ type roleManager struct {
 }
 
 func (m *roleManager) GetRoleValidatorService() {}
+
+func (m *roleManager) SetAuthenticator(authenService IAuthenticator) {
+	m.authenticator = authenService
+}
 
 func (m *roleManager) RefreshToken() error {
 	reply, err := m.authenticator.InternalServiceRefreshToken(m.serviceTokeninfo.GetTokenId(), m.serviceTokeninfo.GetRefreshToken())
